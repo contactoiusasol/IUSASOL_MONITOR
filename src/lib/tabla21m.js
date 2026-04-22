@@ -1,4 +1,5 @@
 import { TOKEN as token } from '../config/token';
+import axios from 'axios';
 
 const urlBase = 'https://api.iusasol.mx/v2.1/api/Farm/Meter/Profiles';
 const API_KEY = token;
@@ -18,7 +19,15 @@ const datepicker = document.getElementById("datepicker");
 // Agregar evento click al botón
 btnEnviar.addEventListener("click", function () {
     // Obtener la fecha seleccionada del datepicker
-    const fechaSeleccionada = datepicker.value;
+        // If user didn't select a date, use local today (YYYY-MM-DD)
+        let fechaSeleccionada = datepicker.value;
+        if (!fechaSeleccionada) {
+            const d = new Date();
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            fechaSeleccionada = `${yyyy}-${mm}-${dd}`;
+        }
     const tableBody = document.getElementById('tabla-datos').getElementsByTagName('tbody')[0];
     
     // Limpiar la tabla antes de agregar nuevos datos
@@ -58,11 +67,12 @@ btnEnviar.addEventListener("click", function () {
             if (result.data.length === 0) {
                 failedMegas.push(result.id);
                 generacionTotal[result.id] = 0; // Generación total = 0
-            } else {
-                // Calcular generación total para este mega
+                } else {
+                // Calcular generación total para este mega (sum channels)
                 generacionTotal[result.id] = result.data.reduce(
-                    (sum, profile) => sum + (parseFloat(profile.channels) || 0, 0
-                ));
+                    (sum, profile) => sum + (parseFloat(profile.channels) || 0),
+                    0
+                );
             }
             allData.push(result.data);
         });

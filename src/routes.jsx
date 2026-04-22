@@ -14,6 +14,8 @@ import { PrivateRoute } from './components/private-route';
 import PorteoPage from './pages/porteo';
 import CincoMinutalPage from './pages/cincominutal';
 import ContratosPage from './pages/contratos';
+import ReportesPage from './pages/reportes';
+import ListadoSFVPage from './pages/listadoSFV';
 
 export const routes = [
   {
@@ -60,6 +62,14 @@ export const routes = [
       {
         path: 'porteo',
         element: <PorteoPage />
+      },
+      {
+        path: 'reportes',
+        element: <ReportesPage />
+      },
+      {
+        path: 'listadoSFV',
+        element: <ListadoSFVPage />
       },
       {
         path: 'contratos',

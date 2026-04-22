@@ -30,10 +30,29 @@ export const megaIds = [
 
 export const urlBase = 'https://api.iusasol.mx/v2.1/api/Reports/Farm/Meter/Profiles';
 
-export const getDataForAllMegas = async (tokenParam) => {
+export const getDataForAllMegas = async (tokenParam, dateParam) => {
   const usedToken = tokenParam || token;
   try {
-    const fechaSeleccionada = new Date().toISOString().split('T')[0];
+    // Use provided dateParam or fallback to local date (YYYY-MM-DD)
+    let d;
+    if (dateParam) {
+      // If dateParam is a string in format YYYY-MM-DD, construct a local Date
+      if (typeof dateParam === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+        const [y, m, day] = dateParam.split('-').map((v) => parseInt(v, 10));
+        d = new Date(y, m - 1, day);
+      } else if (dateParam instanceof Date) {
+        d = dateParam;
+      } else {
+        // fallback: parse and use as Date
+        d = new Date(dateParam);
+      }
+    } else {
+      d = new Date();
+    }
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const fechaSeleccionada = `${yyyy}-${mm}-${dd}`;
     const headers = {
       'Authorization': `Bearer ${usedToken}`,
       'Content-Type': 'application/json',

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Box, Container, Stack, Typography, Card, Button, CircularProgress } from '@mui/material';
+import { Box, Container, Stack, Typography, Card, Button, CircularProgress, Alert } from '@mui/material';
 import { getDataForAllMegas } from 'src/lib/grafica21megas';
 
 const NUM_MEGAS = 21;
@@ -12,17 +12,61 @@ const formatCell = (value) => {
 };
 
 const Tabla = () => {
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [allData, setAllData] = useState([]);
+  const [lostMegas, setLostMegas] = useState([]);
+  const [failedMegas, setFailedMegas] = useState([]);
 
   const handleLoad = async () => {
     setLoading(true);
     setError(null);
     try {
-      const results = await getDataForAllMegas();
+      // Request using the selected date (handled as local date by helper)
+      const results = await getDataForAllMegas(undefined, date);
       setAllData(results);
+
+      // Detect failures (no data) and comm loss (stale > 10 minutes)
+      const failed = [];
+      const latestTimestamps = results.map((profiles) => {
+        if (!profiles || profiles.length === 0) return null;
+        let maxTs = null;
+        for (const p of profiles) {
+          if (!p || !p.time) continue;
+          const t = new Date(p.time).getTime();
+          if (!maxTs || t > maxTs) maxTs = t;
+        }
+        return maxTs;
+      });
+
+      results.forEach((profiles, idx) => {
+        if (!profiles || profiles.length === 0) failed.push(idx + 1);
+      });
+
+      const valid = latestTimestamps.filter((t) => !!t);
+      const maxLatest = valid.length ? Math.max(...valid) : null;
+      const lost = [];
+      if (maxLatest) {
+        for (let i = 0; i < latestTimestamps.length; i++) {
+          const t = latestTimestamps[i];
+          if (!t) {
+            lost.push(i + 1);
+            continue;
+          }
+          const deltaMin = (maxLatest - t) / 60000;
+          if (deltaMin > 10) lost.push(i + 1);
+        }
+      }
+
+      setFailedMegas(failed);
+      setLostMegas(lost);
     } catch (err) {
       console.error(err);
       setError('Error al obtener datos');
@@ -123,6 +167,14 @@ const Tabla = () => {
                   Descargar CSV
                 </Button>
               </Stack>
+
+              {failedMegas.length > 0 && (
+                <Alert severity="warning" sx={{ mt: 2 }}>Los siguientes megas no tienen datos: {failedMegas.join(', ')}</Alert>
+              )}
+
+              {lostMegas.length > 0 && (
+                <Alert severity="error" sx={{ mt: 2 }}>Pérdida de comunicación, ¡Alerta! Megas: {lostMegas.join(', ')}</Alert>
+              )}
 
               {error && <Typography color="error">{error}</Typography>}
 
