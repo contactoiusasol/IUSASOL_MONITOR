@@ -16,6 +16,7 @@ import CincoMinutalPage from './pages/cincominutal';
 import ContratosPage from './pages/contratos';
 import ReportesPage from './pages/reportes';
 import ListadoSFVPage from './pages/listadoSFV';
+import FacturacionPage from './pages/facturacion';
 
 export const routes = [
   {
@@ -78,6 +79,10 @@ export const routes = [
       {
         path: 'medidores',
         element: <MedidoresPage />
+      },
+      {
+        path: 'Facturación',
+        element: <FacturacionPage />
       },
       {
         path: 'icons',

@@ -28,6 +28,7 @@
     "@mui/icons-material": "5.14.19",
     "@mui/lab": "5.0.0-alpha.155",
     "@mui/material": "5.14.20",
+    "@react-pdf/renderer": "^4.5.1",
     "@supabase/supabase-js": "^2.81.1",
     "apexcharts": "3.44.2",
     "axios": "^1.4.0",

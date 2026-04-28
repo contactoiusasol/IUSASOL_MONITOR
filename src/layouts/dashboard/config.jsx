@@ -7,6 +7,7 @@ import ElectricMeterIcon from '@mui/icons-material/ElectricMeter';
 import AvTimer from '@mui/icons-material/AvTimer';
 import AutoGraph from '@mui/icons-material/AutoGraph';
 import Addchart from '@mui/icons-material/Addchart';
+import ReceiptIcon from '@mui/icons-material/Receipt';
 import { SvgIcon } from '@mui/material';
 
 export const items = [
@@ -81,6 +82,15 @@ export const items = [
       </SvgIcon>
     ),
     label: 'Reportes'
+  },
+  {
+    href: '/Facturación',
+    icon: (
+      <SvgIcon>
+        <ReceiptIcon />
+      </SvgIcon>
+    ),
+    label: 'Facturación'
   },
   {
     href: '/error',

@@ -1,63 +1,31 @@
-import { Link as RouterLink } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Box, Button, Container, Typography } from '@mui/material';
+import { Box, Container, Stack, Typography, Card } from '@mui/material';
 
-const Page = () => (
-  <>
-    <Helmet>
-      <title>
-        Error: Not Found | Carpatin Free
-      </title>
-    </Helmet>
-    <Box
-      sx={{
-        backgroundColor: 'background.paper',
-        flexGrow: 1
-      }}
-    >
-      <Container
-        maxWidth="md"
-        sx={{
-          px: 5,
-          py: 14,
-          alignItems: 'center',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        <Box
-          sx={{
-            '& img': {
-              maxWidth: '100%'
-            }
-          }}
-        >
-          <img src="/assets/illustration-not-found.svg" />
-        </Box>
-        <Typography
-          align="center"
-          sx={{ my: 2 }}
-          variant="h3"
-        >
-          Nothing here!
-        </Typography>
-        <Typography
-          align="center"
-          color="text.secondary"
-          variant="body2"
-        >
-          The page requested does not exist.
-        </Typography>
-        <Button
-          to="/"
-          component={RouterLink}
-          sx={{ mt: 2 }}
-        >
-          Take me home
-        </Button>
-      </Container>
-    </Box>
-  </>
-);
+const ErrorPage = () => {
+  return (
+    <>
+      <Helmet>
+        <title>Error: No Encontrado | IUSASOL</title>
+      </Helmet>
+      <Box sx={{ flexGrow: 1, py: 8 }}>
+        <Container maxWidth="xl">
+          <Stack spacing={3}>
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>Error - Página no encontrada</Typography>
 
-export default Page;
+            <Card sx={{ p: 3, boxShadow: 3 }}>
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <Typography variant="h2" sx={{ fontWeight: 700, mb: 2 }}>404</Typography>
+                <Typography variant="h5" sx={{ mb: 2 }}>¡La página solicitada no existe!</Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                  La página que intentas acceder no se encuentra disponible. Por favor, verifica la URL o regresa al inicio.
+                </Typography>
+              </Box>
+            </Card>
+          </Stack>
+        </Container>
+      </Box>
+    </>
+  );
+};
+
+export default ErrorPage;

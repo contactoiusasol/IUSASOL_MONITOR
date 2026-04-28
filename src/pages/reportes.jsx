@@ -41,6 +41,29 @@ const configTablas = {
 
 const MARQUEZ_SERIAL_ESPECIAL = '00000000CS0433 F62J 19MY';
 
+const SERIAL_DISPLAY_NAMES = {
+  '00000000CYM778 VL2E 17NB': 'MEGA 21 A',
+  '00000000CYM780 VL2E 17NB': 'MEGA 21 B',
+  '00000000CYM448 VL2E 17NB': 'CEDIS HERMOSILLO 624 MFV',
+  '00000000CS0486 VL2E 19NB': 'CEDIS HERMOSILLO 621 MFV',
+  '00000000CYM589 KL2E 17NA': 'OBELISCO',
+  '00000000CS0485 VL2E 19NB': 'CIMATARIO',
+  '00000000CYM659 KL2E 17NA': 'PIE DE LA CUESTA',
+  '00000000CYM808 VL2E 17NB': 'TULUM',
+  '00000000CYM600 KL2E 17NA': 'ZACATECAS',
+  '00000000CS0488 VL2E 19NB': 'PROGRESO',
+  '00000000CS1306 VL2E 19NB': 'SAHUARO',
+  '0000000084I87S FD2J 20MX': 'Aeropuerto Santa Lucía 72 MFV',
+  '00000000CYM772 VL2E 17NB': 'Aeropuerto Santa Lucía 2760 MFV',
+  '00000000CS3379 VL2E 19NB': 'Frente 2 Norte 1581 MFV',
+  '00000000CS3378 VL2E 19NB': 'Frente 2 Sur 1605 MFV',
+  '00000000CS3380 VL2E 19NB': 'Torre de Control 282 MFV',
+  '00000000CS3566 KL2E 17NA': 'Frente 5 FBO 177 MFV',
+  '00000000CS0433 F62J 19MY': 'Ing. Marquez NETEO',
+  '00000000CS0462 F62J 19MY': 'Ing. Marquez GEN 10 MFV',
+  '0000000070I04S FD2J 18MX': 'Ing. Marquez Ixtapan 12 MFV'
+};
+
 const headers = {
   'Authorization': `Bearer ${TOKEN}`,
   'Content-Type': 'application/json'
@@ -163,7 +186,7 @@ export default function Reportes() {
       if (!data || data.empty) {
         aoa = [[`Sin datos${data && data.fallidos ? ` (${data.fallidos} fallidos)` : ''}`]];
       } else if (tablaId === 'tabla-marquez') {
-        const header = ['Hora', 'Recibida', 'Entregada', 'Diferencia', ...serials.filter(s => s !== MARQUEZ_SERIAL_ESPECIAL)];
+        const header = ['Hora', 'Recibida', 'Entregada', 'Diferencia', ...serials.filter(s => s !== MARQUEZ_SERIAL_ESPECIAL).map(s => SERIAL_DISPLAY_NAMES[s] || s)];
         aoa.push(header);
         (data.horas || []).forEach(hora => {
           const row = [hora];
@@ -178,7 +201,7 @@ export default function Reportes() {
           aoa.push(row);
         });
       } else {
-        const header = ['Hora', ...serials];
+        const header = ['Hora', ...serials.map(s => SERIAL_DISPLAY_NAMES[s] || s)];
         aoa.push(header);
         (data.horas || []).forEach(hora => {
           const row = [hora];
@@ -227,7 +250,7 @@ export default function Reportes() {
               <th style={{ padding: 8, fontWeight: 700 }}>Entregada</th>
               <th style={{ padding: 8, fontWeight: 700 }}>Diferencia</th>
               {serials.filter(s => s !== MARQUEZ_SERIAL_ESPECIAL).map(s => (
-                <th key={s} style={{ padding: 8, fontWeight: 700 }}>{s}</th>
+                <th key={s} style={{ padding: 8, fontWeight: 700 }}>{SERIAL_DISPLAY_NAMES[s] || s}</th>
               ))}
             </tr>
           </thead>
@@ -256,7 +279,7 @@ export default function Reportes() {
         <thead style={{ background: '#f5f5f5' }}>
           <tr>
             <th style={{ padding: 8, fontWeight: 700 }}>Hora</th>
-            {serials.map(s => (<th key={s} style={{ padding: 8, fontWeight: 700 }}>{s}</th>))}
+            {serials.map(s => (<th key={s} style={{ padding: 8, fontWeight: 700 }}>{SERIAL_DISPLAY_NAMES[s] || s}</th>))}
           </tr>
         </thead>
         <tbody>
