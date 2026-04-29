@@ -50,16 +50,14 @@ const styles = StyleSheet.create({
   },
   // Cuadro destacado para el total
   highlightBox: {
-    backgroundColor: '#f4f4f4',
+    backgroundColor: '#E67E22', // Naranja institucional
     padding: 10,
     borderRadius: 2,
-    borderLeft: '4pt solid #212121',
   },
   totalAmount: {
-    borderTopColor: '#E67E22', // Naranja institucional
-    backgroundColor: '#FDEBD0', // Fondo crema
     fontSize: 15,
     fontWeight: 'bold',
+    color: '#FFFFFF', // Texto blanco
   },
   // Tabla de conceptos
   table: {
