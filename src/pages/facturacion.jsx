@@ -23,91 +23,8 @@ import {
   Alert
 } from '@mui/material';
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { leerExcel, obtenerDatosFacturacion, obtenerTodosMedidores, obtenerGeneracionPorPeriodo, calcularGeneracionTotal } from 'src/lib/facturacion';
-
-// PDF Styles
-const pdfStyles = StyleSheet.create({
-  page: { padding: 30, fontSize: 10, fontFamily: 'Helvetica' },
-  header: { fontSize: 14, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
-  section: { marginBottom: 10 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  label: { fontWeight: 'bold', width: 120 },
-  value: { flex: 1 },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#000' },
-  totalLabel: { fontWeight: 'bold', fontSize: 12 },
-  totalValue: { fontWeight: 'bold', fontSize: 12 }
-});
-
-// PDF Document Component
-const ReciboPDF = ({ data }) => (
-  <Document>
-    <Page size="A4" style={pdfStyles.page}>
-      <Text style={pdfStyles.header}>RECIBO DE FACTURACIÓN - IUSASOL</Text>
-      
-      <View style={pdfStyles.section}>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>Cliente:</Text>
-          <Text style={pdfStyles.value}>{data.cliente}</Text>
-        </View>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>Dirección:</Text>
-          <Text style={pdfStyles.value}>{data.direccion}</Text>
-        </View>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>Medidor:</Text>
-          <Text style={pdfStyles.value}>{data.medidor}</Text>
-        </View>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>Contrato SAP:</Text>
-          <Text style={pdfStyles.value}>{data.contratoSAP}</Text>
-        </View>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>Tarifa:</Text>
-          <Text style={pdfStyles.value}>{data.tarifa}</Text>
-        </View>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>Período:</Text>
-          <Text style={pdfStyles.value}>{data.periodo}</Text>
-        </View>
-      </View>
-
-      <View style={pdfStyles.section}>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>Generación (kWh):</Text>
-          <Text style={pdfStyles.value}>{data.totalPeriodo}</Text>
-        </View>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>Tarifa CFE:</Text>
-          <Text style={pdfStyles.value}>${data.tarifaCFE}</Text>
-        </View>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>Descuento:</Text>
-          <Text style={pdfStyles.value}>{data.descuento}</Text>
-        </View>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>Tarifa IUSASOL:</Text>
-          <Text style={pdfStyles.value}>${data.tarifaIUSASOL}</Text>
-        </View>
-      </View>
-
-      <View style={pdfStyles.section}>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>Subtotal:</Text>
-          <Text style={pdfStyles.value}>${data.subtotal}</Text>
-        </View>
-        <View style={pdfStyles.row}>
-          <Text style={pdfStyles.label}>IVA (16%):</Text>
-          <Text style={pdfStyles.value}>${data.iva}</Text>
-        </View>
-        <View style={pdfStyles.totalRow}>
-          <Text style={pdfStyles.totalLabel}>Total:</Text>
-          <Text style={pdfStyles.totalValue}>${data.total}</Text>
-        </View>
-      </View>
-    </Page>
-  </Document>
-);
+import { ReciboPDF } from 'src/components/recibo-pdf';
 
 export default function FacturacionPage() {
   const [loading, setLoading] = useState(false);
@@ -119,6 +36,44 @@ export default function FacturacionPage() {
   const [fechaFin, setFechaFin] = useState('');
   const [previewData, setPreviewData] = useState(null);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+
+  // Función para obtener decimales según el tipo de tarifa
+  const getDecimalesTarifa = (nombreTarifa) => {
+    if (!nombreTarifa) return 4;
+    
+    const tarifa = nombreTarifa.toUpperCase();
+    
+    // Tarifas con 3 decimales
+    const tarifas3Decimales = [
+      'PDBT CENTRO SUR',
+      'PDBT VALLE DE MÉXICO CENTRO',
+      'PDBT VALLE DE MÉXICO NORTE',
+      'PDBT VALLE DE MÉXICO SUR',
+      'DAC CENTRAL',
+      'DAC SUR',
+      'PDBT CENTRO ORIENTE',
+      '1B SUR',
+      '1A CENTRAL',
+      '1 CENTRAL'
+    ];
+    
+    // Tarifas con 4 decimales
+    const tarifas4Decimales = [
+      'GDMTO VALLE DE MÉXICO SUR',
+      'GDMTO ORIENTE',
+      'GDMTO VALLE DE MÉXICO CENTRO',
+      'GDMTO VALLE DE MÉXICO NORTE'
+    ];
+    
+    if (tarifas3Decimales.some(t => tarifa.includes(t))) {
+      return 3;
+    }
+    if (tarifas4Decimales.some(t => tarifa.includes(t))) {
+      return 4;
+    }
+    
+    return 4; // Por defecto 4 decimales
+  };
 
   // Función para calcular los datos del recibo
   const getReciboData = (item) => {
@@ -137,8 +92,11 @@ export default function FacturacionPage() {
       descuento = descuento / 100;
     }
     
+    // Obtener decimales según el tipo de tarifa
+    const decimales = getDecimalesTarifa(item.nombreTarifa);
+    
     // 4. Tarifa IUSASOL = Tarifa CFE - (Tarifa CFE * descuento) = Tarifa CFE * (1 - descuento)
-    const tarifaIUSASOL = parseFloat((tarifaCFE * (1 - descuento)).toFixed(4));
+    const tarifaIUSASOL = parseFloat((tarifaCFE * (1 - descuento)).toFixed(decimales));
     
     // 5. Subtotal: totalPeriodo * Tarifa IUSASOL
     const subtotal = parseFloat((totalPeriodo * tarifaIUSASOL).toFixed(4));
@@ -295,6 +253,9 @@ export default function FacturacionPage() {
 
     const rows = data.map(item => {
       const reciboData = getReciboData(item);
+      // Obtener decimales para Tarifa IUSASOL según el tipo de tarifa
+      const decimales = getDecimalesTarifa(item.nombreTarifa);
+      const tarifaIUSASOLFormateada = parseFloat((item.tarifaCFE * (1 - (item.descuento > 1 ? item.descuento / 100 : item.descuento))).toFixed(decimales));
       return [
         item.numero,
         item.clienteIUSASOL,
@@ -305,7 +266,7 @@ export default function FacturacionPage() {
         item.nombreTarifa,
         item.descuento,
         item.tarifaCFE,
-        item.tarifaIUSASOL,
+        tarifaIUSASOLFormateada,
         reciboData.totalPeriodo,
         reciboData.subtotal,
         reciboData.iva,
@@ -474,7 +435,7 @@ export default function FacturacionPage() {
                                     Ver
                                   </Button>
                                   <PDFDownloadLink
-                                    document={<ReciboPDF data={reciboData} />}
+                                    document={<ReciboPDF datos={reciboData} imagenes={{ logo: '/datosRecibo1.png', banner: '/datosRecibo2.png', qrSrc: '/datosRecibo3.png', footer: '/datosRecibo4.png' }} />}
                                     fileName={`recibo_${item.medidor}_${fechaInicio}_${fechaFin}.pdf`}
                                   >
                                     {({ loading }) => (
@@ -536,7 +497,7 @@ export default function FacturacionPage() {
                     </Button>
                   </Box>
                   <PDFViewer width="100%" height="500px" showToolbar>
-                    <ReciboPDF data={previewData} />
+                    <ReciboPDF datos={previewData} imagenes={{ logo: '/datosRecibo1.png', banner: '/datosRecibo2.png', qrSrc: '/datosRecibo3.png', footer: '/datosRecibo4.png' }} />
                   </PDFViewer>
                 </Box>
               </Box>
