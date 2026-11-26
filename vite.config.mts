@@ -1,7 +1,62 @@
+import fs from 'node:fs';
+
 import path from 'node:path';
 
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+
+// En desarrollo/preview no hay PHP: Vite replica public/api/datos.php
+// leyendo el archivo de public/datos/ directamente del disco (sin sesion;
+// en produccion la sesion SI se valida en el servidor).
+const DATOS_TIPOS = {
+  'systems.csv': 'text/csv; charset=utf-8',
+  'MedidoresMonitoreo.csv': 'text/csv; charset=utf-8',
+  'listadoSFV.xlsx':
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'ListadoFacturacion.xlsx':
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+};
+
+function datosDevMiddleware(req, res, next) {
+  const url = (req.url || '').split('?')[0];
+  if (url !== '/api/datos.php') return next();
+
+  const query = new URL(req.url || '', 'http://localhost').searchParams;
+  const nombre = query.get('f') || '';
+  const tipo = DATOS_TIPOS[nombre];
+
+  if (!tipo) {
+    res.statusCode = 404;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.end(
+      JSON.stringify({
+        response: { code: 404, result: 'error', message: 'Archivo no encontrado.' }
+      })
+    );
+    return;
+  }
+
+  const archivo = path.join(process.cwd(), 'public', 'datos', nombre);
+  if (!fs.existsSync(archivo)) {
+    res.statusCode = 404;
+    res.end('Archivo no encontrado en el servidor.');
+    return;
+  }
+
+  res.statusCode = 200;
+  res.setHeader('Content-Type', tipo);
+  fs.createReadStream(archivo).pipe(res);
+}
+
+const datosDevPlugin = () => ({
+  name: 'iusasol-datos-dev',
+  configureServer(server) {
+    server.middlewares.use(datosDevMiddleware);
+  },
+  configurePreviewServer(server) {
+    server.middlewares.use(datosDevMiddleware);
+  }
+});
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
@@ -33,7 +88,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: '/',
-    plugins: [react()],
+    plugins: [react(), datosDevPlugin()],
     resolve: {
       alias: [
         {

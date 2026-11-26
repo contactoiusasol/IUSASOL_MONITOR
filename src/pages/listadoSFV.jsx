@@ -5,7 +5,7 @@ import listadoSFV from 'src/lib/listadoSFV';
 
 const ListadoSFV = () => {
   const [fecha, setFecha] = useState('');
-  // The Excel file is expected to be in public/listadoSFV.xlsx so no upload is needed
+  // The Excel file is read from the server via /api/datos.php (requires session)
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -45,7 +45,7 @@ const ListadoSFV = () => {
     }
   }
 
-  // no file input; reads /listadoSFV.xlsx from public by default
+  // no file input; reads datos/listadoSFV.xlsx from the server by default
 
   function exportCSV() {
     if (!rows.length) return;
@@ -95,7 +95,7 @@ const ListadoSFV = () => {
                 />
 
                 <Typography variant="body2" sx={{ ml: 1 }}>
-                  Los datos se leen desde <code>/listadoSFV.xlsx</code> en la carpeta <code>public/</code>
+                  Los datos se leen desde <code>datos/listadoSFV.xlsx</code> en el servidor (protegido)
                 </Typography>
 
                 <Button variant="contained" onClick={handleConsultar} disabled={loading}>

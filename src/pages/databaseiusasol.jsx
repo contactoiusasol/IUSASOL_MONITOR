@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Box, Container, Stack, Typography, Card, Button, CircularProgress } from '@mui/material';
-
-const CSV_PATH = '/MedidoresMonitoreo.csv';
+import { fetchDato } from 'src/lib/datos';
 
 function parseCSV(csv) {
   const lines = csv.trim().split(/\r?\n/).filter(Boolean);
@@ -55,8 +54,7 @@ const DatabaseIUSASOL = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(CSV_PATH);
-      if (!res.ok) throw new Error('No se pudo cargar el CSV');
+      const res = await fetchDato('MedidoresMonitoreo.csv');
       const text = await res.text();
       setCsvText(text);
       const { headers: h, rows: r } = parseCSV(text);
@@ -64,7 +62,7 @@ const DatabaseIUSASOL = () => {
       setRows(r);
     } catch (err) {
       console.error(err);
-      setError('Error al cargar el CSV');
+      setError(err?.message || 'Error al cargar el CSV');
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { getMeters, getProfilesDetailed } from './api/endpoints';
+import { fetchDato } from './datos';
 
 // Endpoints - usando URL directa como en idmedidores.js
 const comp_any = 'IUSASOL SUMINISTRADORA ENERGIA';
@@ -7,13 +8,13 @@ const MeasuringValue = '2';  // Para generación
 const MeasuringType = 'E';   // Energía
 
 /**
- * Lee el archivo Excel de facturación desde la carpeta public
+ * Lee el archivo Excel de facturacion desde el servidor protegido
  * @returns {Promise<Array>} Array de objetos con los datos del Excel
  */
 export async function leerExcel() {
   try {
-    // Fetch the Excel file from public folder
-    const response = await fetch('/ListadoFacturacion.xlsx');
+    // Se lee desde /api/datos.php (requiere sesion valida)
+    const response = await fetchDato('ListadoFacturacion.xlsx');
     const arrayBuffer = await response.arrayBuffer();
     
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });

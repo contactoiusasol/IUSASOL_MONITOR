@@ -1,0 +1,14 @@
+# Los archivos de datos NUNCA se sirven por HTTP.
+# La app los lee via /api/datos.php (que valida la sesion de Supabase).
+#
+# Nota: en este hosting AllowOverride es restringido. Si estas directivas
+# no estan permitidas, Apache devolvera 500 para /datos/* en vez de 403:
+# tambien bloquea el acceso y NO afecta a la app (PHP lee por disco, no
+# por HTTP).
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

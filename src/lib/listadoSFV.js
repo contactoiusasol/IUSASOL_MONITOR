@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { getMeters, getProfilesDetailed } from './api/endpoints';
+import { fetchDato } from './datos';
 
 const comp_any = "IUSASOL SUMINISTRADORA ENERGIA";
 
@@ -10,11 +11,8 @@ async function leerExcel(file) {
     if (file instanceof File) {
       data = await file.arrayBuffer();
     } else {
-      // try to fetch the file from public folder
-      const response = await fetch('/listadoSFV.xlsx');
-      if (!response.ok) {
-        throw new Error(`Error al cargar el archivo: ${response.statusText}`);
-      }
+      // se lee desde el servidor protegido (requiere sesion valida)
+      const response = await fetchDato('listadoSFV.xlsx');
       data = await response.arrayBuffer();
     }
 
