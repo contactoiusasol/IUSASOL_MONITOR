@@ -36,10 +36,27 @@ const configTablas = {
     '00000000CS0433 F62J 19MY',
     '00000000CS0462 F62J 19MY',
     '0000000070I04S FD2J 18MX'
+  ],
+  'IUSA-Aragon': [
+    '00000000CS1980 VL2E 19NB',
+    '00000000CYM773 VL2E 17NB'
+  ],
+  'Almacenamiento Ener. ZS': [
+    '00000000CS3190 VL2E 19NB'
+  ],
+  'Almacenamiento Ener. ZN': [
+    '00000000CS3878 VL2E 19NB'
+  ],
+  'Cogeneracion': [
+    '00000000CS1305 VL2E 19NB'
   ]
 };
 
 const MARQUEZ_SERIAL_ESPECIAL = '00000000CS0433 F62J 19MY';
+const IUSA_ARAGON_SERIAL_ESPECIAL = '00000000CS1980 VL2E 19NB';
+const Almacenamiento_Zona_Sur_SERIAL_ESPECIAL = '00000000CS3190 VL2E 19NB';
+const Almacenamiento_Zona_Norte_SERIAL_ESPECIAL = '00000000CS3878 VL2E 19NB';
+
 
 const SERIAL_DISPLAY_NAMES = {
   '00000000CYM778 VL2E 17NB': 'MEGA 21 A',
@@ -61,7 +78,12 @@ const SERIAL_DISPLAY_NAMES = {
   '00000000CS3566 KL2E 17NA': 'Frente 5 FBO 177 MFV',
   '00000000CS0433 F62J 19MY': 'Ing. Marquez NETEO',
   '00000000CS0462 F62J 19MY': 'Ing. Marquez GEN 10 MFV',
-  '0000000070I04S FD2J 18MX': 'Ing. Marquez Ixtapan 12 MFV'
+  '0000000070I04S FD2J 18MX': 'Ing. Marquez Ixtapan 12 MFV',
+  '00000000CS1980 VL2E 19NB': 'IUSA Aragon NETEO',
+  '00000000CYM773 VL2E 17NB': 'IUSA Aragon 315 MFV DE 255W',
+  '00000000CS3190 VL2E 19NB': 'Almacenamiento Ener. ZS',
+  '00000000CS3878 VL2E 19NB': 'Almacenamiento Ener. ZN',
+  '00000000CS1305 VL2E 19NB': 'Cogeneracion'
 };
 
 const headers = {
@@ -172,12 +194,39 @@ export default function Reportes() {
     }
   }
 
+  function getSafeSheetName(tablaId, usedNames = new Set()) {
+    let sanitized = '';
+    for (const char of (tablaId || 'Hoja')) {
+      if (/[A-Za-z0-9 ._-]/.test(char)) {
+        sanitized += char;
+      } else {
+        sanitized += ' ';
+      }
+    }
+
+    sanitized = sanitized.trim() || 'Hoja';
+    const baseName = sanitized.length > 31 ? sanitized.slice(0, 31) : sanitized;
+
+    let finalName = baseName;
+    let counter = 1;
+    while (usedNames.has(finalName)) {
+      const suffix = ` ${counter}`;
+      const availableLength = 31 - suffix.length;
+      finalName = `${baseName.slice(0, Math.max(1, availableLength))}${suffix}`;
+      counter += 1;
+    }
+
+    usedNames.add(finalName);
+    return finalName;
+  }
+
   function handleExportAll() {
     // build workbook
     const workbook = XLSX.utils.book_new();
     const anyData = Object.keys(results).length > 0;
     if (!anyData) return;
 
+    const usedSheetNames = new Set();
     Object.keys(configTablas).forEach((tablaId) => {
       const data = results[tablaId];
       const serials = configTablas[tablaId];
@@ -185,16 +234,30 @@ export default function Reportes() {
       let aoa = [];
       if (!data || data.empty) {
         aoa = [[`Sin datos${data && data.fallidos ? ` (${data.fallidos} fallidos)` : ''}`]];
-      } else if (tablaId === 'tabla-marquez') {
-        const header = ['Hora', 'Recibida', 'Entregada', 'Diferencia', ...serials.filter(s => s !== MARQUEZ_SERIAL_ESPECIAL).map(s => SERIAL_DISPLAY_NAMES[s] || s)];
+      } else if (
+        tablaId === 'tabla-marquez' ||
+        tablaId === 'IUSA-Aragon' ||
+        tablaId === 'Almacenamiento Ener. ZS' ||
+        tablaId === 'Almacenamiento Ener. ZN'
+      ) {
+        const serialEspecial =
+          tablaId === 'tabla-marquez'
+            ? MARQUEZ_SERIAL_ESPECIAL
+            : tablaId === 'IUSA-Aragon'
+              ? IUSA_ARAGON_SERIAL_ESPECIAL
+              : tablaId === 'Almacenamiento Ener. ZS'
+                ? Almacenamiento_Zona_Sur_SERIAL_ESPECIAL
+                : Almacenamiento_Zona_Norte_SERIAL_ESPECIAL;
+
+        const header = ['Hora', 'Recibida', 'Entregada', 'Diferencia', ...serials.filter(s => s !== serialEspecial).map(s => SERIAL_DISPLAY_NAMES[s] || s)];
         aoa.push(header);
         (data.horas || []).forEach(hora => {
           const row = [hora];
           ['recibida', 'entregada', 'diferencia'].forEach(campo => {
-            const valor = data.datosPorMedidor[MARQUEZ_SERIAL_ESPECIAL]?.find(d => d.hora === hora)?.[campo];
+            const valor = data.datosPorMedidor[serialEspecial]?.find(d => d.hora === hora)?.[campo];
             row.push(valor ?? 'N/A');
           });
-          serials.filter(s => s !== MARQUEZ_SERIAL_ESPECIAL).forEach(s => {
+          serials.filter(s => s !== serialEspecial).forEach(s => {
             const valor = data.datosPorMedidor[s]?.find(d => d.hora === hora)?.genera;
             row.push(valor ?? 'N/A');
           });
@@ -214,8 +277,7 @@ export default function Reportes() {
       }
 
       const worksheet = XLSX.utils.aoa_to_sheet(aoa);
-      // sheet name safe: take last part if too long
-      const sheetName = tablaId.length > 31 ? tablaId.slice(0, 28) + '...' : tablaId;
+      const sheetName = getSafeSheetName(tablaId, usedSheetNames);
       XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
     });
 
@@ -240,7 +302,21 @@ export default function Reportes() {
 
     const horas = data.horas || [];
 
-    if (tablaId === 'tabla-marquez') {
+    if (
+      tablaId === 'tabla-marquez' ||
+      tablaId === 'IUSA-Aragon' ||
+      tablaId === 'Almacenamiento Ener. ZS' ||
+      tablaId === 'Almacenamiento Ener. ZN'
+    ) {
+      const serialEspecial =
+        tablaId === 'tabla-marquez'
+          ? MARQUEZ_SERIAL_ESPECIAL
+          : tablaId === 'IUSA-Aragon'
+            ? IUSA_ARAGON_SERIAL_ESPECIAL
+            : tablaId === 'Almacenamiento Ener. ZS'
+              ? Almacenamiento_Zona_Sur_SERIAL_ESPECIAL
+              : Almacenamiento_Zona_Norte_SERIAL_ESPECIAL;
+
       return (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ background: '#f5f5f5' }}>
@@ -249,7 +325,7 @@ export default function Reportes() {
               <th style={{ padding: 8, fontWeight: 700 }}>Recibida</th>
               <th style={{ padding: 8, fontWeight: 700 }}>Entregada</th>
               <th style={{ padding: 8, fontWeight: 700 }}>Diferencia</th>
-              {serials.filter(s => s !== MARQUEZ_SERIAL_ESPECIAL).map(s => (
+              {serials.filter(s => s !== serialEspecial).map(s => (
                 <th key={s} style={{ padding: 8, fontWeight: 700 }}>{SERIAL_DISPLAY_NAMES[s] || s}</th>
               ))}
             </tr>
@@ -259,10 +335,10 @@ export default function Reportes() {
               <tr key={hora}>
                 <td style={{ padding: 6 }}>{hora}</td>
                 {['recibida','entregada','diferencia'].map(campo => {
-                  const valor = data.datosPorMedidor[MARQUEZ_SERIAL_ESPECIAL]?.find(d => d.hora === hora)?.[campo];
+                  const valor = data.datosPorMedidor[serialEspecial]?.find(d => d.hora === hora)?.[campo];
                   return (<td key={campo} style={{ padding: 6 }}>{valor ?? 'N/A'}</td>);
                 })}
-                {serials.filter(s => s !== MARQUEZ_SERIAL_ESPECIAL).map(s => {
+                {serials.filter(s => s !== serialEspecial).map(s => {
                   const valor = data.datosPorMedidor[s]?.find(d => d.hora === hora)?.genera;
                   return (<td key={s} style={{ padding: 6 }}>{valor ?? 'N/A'}</td>);
                 })}
