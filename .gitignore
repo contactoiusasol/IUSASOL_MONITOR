@@ -23,3 +23,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 dist
+
+# token de la API IUSASOL (vive en public/api/, nunca a git)
+public/api/token.config.php
+public/api/token.cache.json

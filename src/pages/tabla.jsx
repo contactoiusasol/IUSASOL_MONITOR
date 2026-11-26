@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Box, Container, Stack, Typography, Card, Button, CircularProgress, Alert } from '@mui/material';
 import { getDataForAllMegas } from 'src/lib/grafica21megas';
+import { getToday } from 'src/lib/api/endpoints';
 
 const NUM_MEGAS = 21;
 
@@ -30,7 +31,7 @@ const Tabla = () => {
     setError(null);
     try {
       // Request using the selected date (handled as local date by helper)
-      const results = await getDataForAllMegas(undefined, date);
+      const results = await getDataForAllMegas(date);
       setAllData(results);
 
       // Detect failures (no data) and comm loss (stale > 10 minutes)
@@ -76,7 +77,18 @@ const Tabla = () => {
   };
 
   useEffect(() => {
-    // no-op on mount
+    // Fecha por defecto segun el servidor (Server/date), no la del navegador
+    let alive = true;
+    getToday()
+      .then((serverToday) => {
+        if (alive && serverToday) setDate(serverToday);
+      })
+      .catch(() => {
+        // sin Server/date: se conserva la fecha local
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const maxRows = useMemo(() => {

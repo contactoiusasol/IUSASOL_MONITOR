@@ -2,7 +2,8 @@ import { Helmet } from 'react-helmet-async';
 import { Box, Container, Typography, CircularProgress, TextField, Alert, Button, Stack } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
 import { Chart, registerables } from 'chart.js';
-import { getDataForAllMegas, token as DEFAULT_TOKEN } from 'src/lib/grafica21megas';
+import { getDataForAllMegas } from 'src/lib/grafica21megas';
+import { getToday } from 'src/lib/api/endpoints';
 
 Chart.register(...registerables);
 
@@ -28,21 +29,22 @@ const GraficasPage = () => {
   const selectedDateRef = useRef(selectedDate);
   const mountedRef = useRef(true);
 
+  // "Hoy" segun el SERVIDOR (Server/date): evita depender de la zona horaria
+  // del navegador. Arranca con la fecha local y se corrige sola al llegar.
+  const [todayServer, setTodayServer] = useState(selectedDate);
+  const todayRef = useRef(todayServer);
+  todayRef.current = todayServer;
+  const userPickedRef = useRef(false);
+
   // Today's date string in local time (YYYY-MM-DD)
-  const todayString = (() => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  })();
+  const todayString = todayServer;
 
   // Centralized loader that can be called from effects and handlers
   const load = async (dateToFetch) => {
     setLoading(true);
     setError(null);
     try {
-      const allData = await getDataForAllMegas(DEFAULT_TOKEN, dateToFetch);
+      const allData = await getDataForAllMegas(dateToFetch);
 
       if (!mountedRef.current) return;
 
@@ -198,18 +200,37 @@ const GraficasPage = () => {
   // effect here was removed to avoid referencing old variables (canvasRef/chartRef)
 
   // When user changes selectedDate via UI, fetch immediately
-  // When user changes selectedDate via UI, fetch immediately
   useEffect(() => {
     selectedDateRef.current = selectedDate;
     load(selectedDate);
   }, [selectedDate]);
 
+  // Corrige "hoy" con la fecha del servidor apenas disponible (Server/date)
+  useEffect(() => {
+    let alive = true;
+    getToday()
+      .then((serverToday) => {
+        if (!alive || !serverToday) return;
+        setTodayServer(serverToday);
+        todayRef.current = serverToday;
+        if (!userPickedRef.current && serverToday !== selectedDateRef.current) {
+          selectedDateRef.current = serverToday;
+          setSelectedDate(serverToday); // recarga via el efecto de selectedDate
+        }
+      })
+      .catch(() => {
+        // sin conexion al Server/date: se conserva la fecha local
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   // Auto refresh every 5 minutes. If user is viewing a past date, after the interval
   // we switch back to today's date and reload.
   useEffect(() => {
     const interval = setInterval(() => {
-      const d = new Date();
-      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const today = todayRef.current;
       if (selectedDateRef.current !== today) {
         selectedDateRef.current = today;
         setSelectedDate(today);
@@ -236,7 +257,10 @@ const GraficasPage = () => {
               label="Fecha"
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => {
+                userPickedRef.current = true;
+                setSelectedDate(e.target.value);
+              }}
               InputLabelProps={{ shrink: true }}
               size="small"
             />

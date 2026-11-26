@@ -1,24 +1,10 @@
 import * as XLSX from 'xlsx';
-import axios from 'axios';
-import { TOKEN } from 'src/config/token';
+import { getMeters, getProfilesDetailed } from './api/endpoints';
 
 // Endpoints - usando URL directa como en idmedidores.js
-const urlMetersBase = 'https://api.iusasol.mx/v2.1/api/Reports/ISOL/Meters';
-const urlProfilesBase = 'https://api.iusasol.mx/v2.1/api/Reports/ISOL/Profiles/Detailed';
-
 const comp_any = 'IUSASOL SUMINISTRADORA ENERGIA';
 const MeasuringValue = '2';  // Para generación
-const MeasuringType = 'e';   // Energía
-
-const headers = {
-  'Authorization': `Bearer ${TOKEN}`,
-  'Access-Control-Allow-Methods': 'GET',
-  'Access-Control-Allow-Origin': 'https://api.iusasol.mx',
-  'Content-Type': 'application/json',
-  'Cache-Control': 'no-cache'
-};
-
-const params = { company: comp_any };
+const MeasuringType = 'E';   // Energía
 
 /**
  * Lee el archivo Excel de facturación desde la carpeta public
@@ -111,8 +97,8 @@ export async function leerExcel() {
  */
 export async function obtenerTodosMedidores() {
   try {
-    const response = await axios.get(urlMetersBase, { headers, params });
-    const meters = response.data && response.data.meters ? response.data.meters : [];
+    const data = await getMeters(comp_any);
+    const meters = data && data.meters ? data.meters : [];
     console.log(`Obtenidos ${meters.length} medidores con IDcodes`);
     return meters;
   } catch (error) {
@@ -130,19 +116,17 @@ export async function obtenerTodosMedidores() {
  */
 export async function obtenerGeneracionPorPeriodo(idcode, fechaInicio, fechaFin) {
   try {
-    const queryParams = {
+    console.log(`Fetching profiles for idcode: ${idcode}, dates: ${fechaInicio} to ${fechaFin}`);
+    const data = await getProfilesDetailed({
       id: idcode,
       beginDate: fechaInicio,
       endDate: fechaFin,
       tym: MeasuringValue,
       tye: MeasuringType,
       company: comp_any
-    };
-    
-    console.log(`Fetching profiles for idcode: ${idcode}, dates: ${fechaInicio} to ${fechaFin}`);
-    const response = await axios.get(urlProfilesBase, { params: queryParams, headers });
-    
-    const profiles = response.data && response.data.profiles ? response.data.profiles : [];
+    });
+
+    const profiles = data && data.profiles ? data.profiles : [];
     console.log(`Profiles obtenidos para ${idcode}:`, profiles.length);
     
     return profiles;

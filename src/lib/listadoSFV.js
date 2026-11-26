@@ -1,17 +1,7 @@
-import axios from 'axios';
 import * as XLSX from 'xlsx';
-import { TOKEN } from 'src/config/token';
+import { getMeters, getProfilesDetailed } from './api/endpoints';
 
-const urlBase = 'https://api.iusasol.mx/v2.1/api/Reports/ISOL/Meters';
 const comp_any = "IUSASOL SUMINISTRADORA ENERGIA";
-
-const headers = {
-  Authorization: `Bearer ${TOKEN}`,
-  'Access-Control-Allow-Methods': 'GET',
-  'Access-Control-Allow-Origin': 'https://api.iusasol.mx',
-  'Content-Type': 'application/json',
-  'Cache-Control': 'no-cache'
-};
 
 async function leerExcel(file) {
   try {
@@ -49,11 +39,15 @@ async function leerExcel(file) {
 }
 
 async function obtenerGenera(idcode, fecha) {
-  const urlGenera = `https://api.iusasol.mx/v2.1/api/Reports/ISOL/Profiles/Detailed?id=${idcode}&beginDate=${fecha}&endDate=${fecha}&tym=2&tye=E`;
-
   try {
-    const response = await axios.get(urlGenera, { headers });
-    const profiles = response.data.profiles || [];
+    const data = await getProfilesDetailed({
+      id: idcode,
+      beginDate: fecha,
+      endDate: fecha,
+      tym: '2',
+      tye: 'E'
+    });
+    const profiles = (data && data.profiles) || [];
 
     const sumaGenera = profiles.reduce((sum, profile) => {
       return sum + (profile.values && profile.values.genera ? profile.values.genera : 0);
@@ -73,11 +67,9 @@ async function obtenerGenera(idcode, fecha) {
  * @returns {Array} filas con { serial, idcode, usuario, noDeModulos, genera, resultado, tipoSistema, tipoLectura, color }
  */
 async function obtenerDatos(fecha, file) {
-  const params = { company: comp_any };
-
   try {
-    const res = await axios.get(urlBase, { params, headers });
-    const meters = res.data.meters || [];
+    const data = await getMeters(comp_any);
+    const meters = (data && data.meters) || [];
     const datosReferencias = await leerExcel(file);
 
     const rows = [];
@@ -137,11 +129,9 @@ async function obtenerDatos(fecha, file) {
  * Useful for progressive rendering in the UI so rows appear conforme llegan
  */
 async function* obtenerDatosStream(fecha, file) {
-  const params = { company: comp_any };
-
   try {
-    const res = await axios.get(urlBase, { params, headers });
-    const meters = res.data.meters || [];
+    const data = await getMeters(comp_any);
+    const meters = (data && data.meters) || [];
     const datosReferencias = await leerExcel(file);
 
     for (const { serial, segundoValor, tercerValor, cuartoValor, quintoValor } of datosReferencias) {

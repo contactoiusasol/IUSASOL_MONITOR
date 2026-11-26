@@ -3,8 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { Box, Container, Stack, Typography, Card, Grid, TextField, Button, LinearProgress, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import * as XLSX from 'xlsx';
-import axios from 'axios';
-import { TOKEN } from 'src/config/token';
+import { getMeters, getProfilesDetailed } from 'src/lib/api/endpoints';
 
 const configTablas = {
   'tabla-mega-21': [
@@ -86,11 +85,6 @@ const SERIAL_DISPLAY_NAMES = {
   '00000000CS1305 VL2E 19NB': 'Cogeneracion'
 };
 
-const headers = {
-  'Authorization': `Bearer ${TOKEN}`,
-  'Content-Type': 'application/json'
-};
-
 export default function Reportes() {
   const [fecha, setFecha] = useState('');
   const [loading, setLoading] = useState(false);
@@ -99,7 +93,7 @@ export default function Reportes() {
 
   async function inicializarMapeo() {
     try {
-      const { data } = await axios.get('https://api.iusasol.mx/v2.1/api/Reports/ISOL/Meters', { headers });
+      const data = await getMeters();
       const serialesNecesarios = Object.values(configTablas).flat();
       const map = {};
       (data.meters || []).forEach(m => {
@@ -118,11 +112,17 @@ export default function Reportes() {
     if (!idcode) return { error: 'No registrado' };
 
     try {
-      const { data } = await axios.get('https://api.iusasol.mx/v2.1/api/Reports/ISOL/Profiles/Detailed', {
-        params: { id: idcode, beginDate: fecha, endDate: fecha, tym: '2', tye: 'e', company: 'IUSASOL SUMINISTRADORA ENERGIA' },
-        headers,
-        timeout: 10000
-      });
+      const data = await getProfilesDetailed(
+        {
+          id: idcode,
+          beginDate: fecha,
+          endDate: fecha,
+          tym: '2',
+          tye: 'E',
+          company: 'IUSASOL SUMINISTRADORA ENERGIA'
+        },
+        { timeout: 10000 }
+      );
 
       if (!data.profiles) return { error: 'Sin datos' };
 
@@ -188,7 +188,7 @@ export default function Reportes() {
       setResults(newResults);
     } catch (err) {
       console.error(err);
-      setError('Error al procesar datos');
+      setError(err && err.message ? err.message : 'Error al procesar datos');
     } finally {
       setLoading(false);
     }

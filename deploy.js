@@ -81,6 +81,8 @@ const checklist = `# ✅ CHECKLIST DE DESPLIEGUE
   - [ ] index.html está presente
   - [ ] .htaccess está presente (puede estar oculto)
   - [ ] Carpeta assets/ con todos los archivos
+  - [ ] Carpeta api/ con proxy.php, token.config.php y .htaccess (AHÍ VIVE EL TOKEN)
+  - [ ] Verifica en el navegador: https://reportes.iusasol.mx/api/proxy.php?path=Server/date debe devolver JSON
   - [ ] Todos los archivos tienen permisos de lectura (644 archivos, 755 directorios)
 
 ## Verificar en el servidor
@@ -119,6 +121,7 @@ console.log('📋 Archivos para subir con WinSCP:\n');
 console.log('   📁 dist/');
 console.log('      ├── index.html');
 console.log('      ├── .htaccess (IMPORTANTE)');
+console.log('      ├── api/            ← proxy.php + token.config.php + .htaccess');
 console.log('      └── assets/');
 console.log('          ├── *.css');
 console.log('          └── *.js\n');

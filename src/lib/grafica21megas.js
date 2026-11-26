@@ -1,8 +1,4 @@
-import axios from 'axios';
-import { TOKEN } from '../config/token';
-
-// Re-export a `token` named export for compatibility with imports elsewhere
-export const token = TOKEN;
+import { getFarmMeterProfiles, getToday } from './api/endpoints';
 
 export const megaIds = [
     "1yhkHn92S_uK8n65m9mfVLpgeX7vuCn-3NzLrz1cURoPlIMgd9PF_hdg9svnATlk",
@@ -28,47 +24,33 @@ export const megaIds = [
     "1yhkHn92S_uK8n65m9mfVLpgeX7vuCn-3NzLrz1cURqcb6WDHglD-W7OyNJZ6xfQ"
 ];
 
-export const urlBase = 'https://api.iusasol.mx/v2.1/api/Reports/Farm/Meter/Profiles';
+const toDateString = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-export const getDataForAllMegas = async (tokenParam, dateParam) => {
-  const usedToken = tokenParam || token;
-  try {
-    // Use provided dateParam or fallback to local date (YYYY-MM-DD)
-    let d;
-    if (dateParam) {
-      // If dateParam is a string in format YYYY-MM-DD, construct a local Date
-      if (typeof dateParam === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
-        const [y, m, day] = dateParam.split('-').map((v) => parseInt(v, 10));
-        d = new Date(y, m - 1, day);
-      } else if (dateParam instanceof Date) {
-        d = dateParam;
-      } else {
-        // fallback: parse and use as Date
-        d = new Date(dateParam);
-      }
-    } else {
-      d = new Date();
-    }
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const fechaSeleccionada = `${yyyy}-${mm}-${dd}`;
-    const headers = {
-      'Authorization': `Bearer ${usedToken}`,
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache'
-    };
-
-    const promises = megaIds.map((id) =>
-      axios.get(urlBase, { params: { id, date: fechaSeleccionada, periodicity: 0 }, headers })
-    );
-
-    const responses = await Promise.all(promises);
-
-    // Map to profiles arrays
-    return responses.map((r) => r.data.profiles);
-  } catch (error) {
-    console.error('Error fetching megas data:', error.response ? error.response.data : error.message);
-    throw error;
+/**
+ * Perfiles diarios de las 21 megas.
+ * @param {string|Date} [dateParam] - Fecha a consultar; si se omite usa la
+ *   fecha del SERVIDOR (Server/date), no la del navegador.
+ * @returns {Promise<Array<Array>>} un array de profiles por mega. Las megas
+ *   que fallen devuelven [] en lugar de tumbar toda la carga.
+ */
+export const getDataForAllMegas = async (dateParam) => {
+  let fechaSeleccionada;
+  if (dateParam instanceof Date) {
+    fechaSeleccionada = toDateString(dateParam);
+  } else if (typeof dateParam === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+    fechaSeleccionada = dateParam;
+  } else if (dateParam) {
+    fechaSeleccionada = toDateString(new Date(dateParam));
+  } else {
+    fechaSeleccionada = await getToday();
   }
+
+  const settled = await Promise.allSettled(
+    megaIds.map((id) => getFarmMeterProfiles({ id, date: fechaSeleccionada }))
+  );
+
+  return settled.map((s) =>
+    s.status === 'fulfilled' && s.value && s.value.profiles ? s.value.profiles : []
+  );
 };
