@@ -146,6 +146,98 @@ function datos_sesion_valida($jwt, $url, $key)
     return false;
 }
 
+/**
+ * Extrae el sujeto (sub / user id) del payload de un JWT de Supabase.
+ * No verifica la firma aqui: el JWT ya fue validado contra Supabase en
+ * datos_sesion_valida() antes de llegar a esta funcion.
+ */
+function datos_jwt_sub($jwt)
+{
+    $partes = explode('.', $jwt);
+    if (count($partes) < 2) {
+        return '';
+    }
+    $payload = strtr($partes[1], '-_', '+/');
+    $resto = strlen($payload) % 4;
+    if ($resto !== 0) {
+        $payload .= str_repeat('=', 4 - $resto);
+    }
+    $datos = json_decode(base64_decode($payload), true);
+    if (!is_array($datos) || empty($datos['sub'])) {
+        return '';
+    }
+    return (string) $datos['sub'];
+}
+
+/**
+ * true solo si el usuario del JWT tiene rol 'admin' en public.user_roles.
+ * Se consulta con el propio JWT (RLS: solo puede leer su propia fila).
+ * FAIL-CLOSED: cualquier duda (sin red, tabla ausente, rol 'usuario')
+ * devuelve false y se registra en el log.
+ */
+function datos_es_admin($jwt, $url, $key)
+{
+    $cache = sys_get_temp_dir() . '/iusasol_rol_' . sha1($jwt) . '.json';
+    if (is_file($cache)) {
+        $c = json_decode((string) file_get_contents($cache), true);
+        if (is_array($c) && isset($c['hasta']) && (int) $c['hasta'] > time()) {
+            return !empty($c['admin']);
+        }
+    }
+
+    $sub = datos_jwt_sub($jwt);
+    if ($sub === '' || $url === '' || $key === '' || !function_exists('curl_init')) {
+        error_log('[IUSASOL] datos.php: no se pudo leer el sujeto del JWT para consultar el rol.');
+        return false;
+    }
+
+    $endpoint = rtrim($url, '/')
+        . '/rest/v1/user_roles?user_id=eq.' . rawurlencode($sub)
+        . '&select=role&limit=1';
+
+    $ch = curl_init($endpoint);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'apikey: ' . $key,
+        'Authorization: Bearer ' . $jwt,
+        'Accept: application/json',
+    ));
+    $body = curl_exec($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $errno = curl_errno($ch);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if ($errno !== 0) {
+        error_log('[IUSASOL] datos.php no pudo consultar user_roles (' . $err . ').');
+        return false;
+    }
+
+    $esAdmin = false;
+    if ($status === 200) {
+        $filas = json_decode((string) $body, true);
+        if (is_array($filas)) {
+            foreach ($filas as $fila) {
+                if (isset($fila['role']) && $fila['role'] === 'admin') {
+                    $esAdmin = true;
+                    break;
+                }
+            }
+        }
+    } else {
+        error_log('[IUSASOL] datos.php user_roles HTTP ' . $status . ': ' . substr((string) $body, 0, 200));
+    }
+
+    @file_put_contents(
+        $cache,
+        json_encode(array('admin' => $esAdmin ? 1 : 0, 'hasta' => time() + 300)),
+        LOCK_EX
+    );
+    return $esAdmin;
+}
+
 // ===========================================================================
 // Flujo principal
 // ===========================================================================
@@ -154,6 +246,14 @@ $f = isset($_GET['f']) ? (string) $_GET['f'] : '';
 
 if ($f === '' || !isset($archivos[$f])) {
     datos_responder(404, 'Archivo no encontrado.');
+}
+
+// listadoSFV.xlsx es EXCLUSIVO de administradores: ademas de la sesion
+// (que se valida abajo) exige rol 'admin'. Sin auth activa no hay forma
+// de comprobarlo -> se niega (fail-closed).
+$requiereAdmin = ($f === 'listadoSFV.xlsx');
+if ($requiereAdmin && !$requerirAuth) {
+    datos_responder(403, 'Configuracion invalida: listadoSFV.xlsx requiere autenticacion activa.');
 }
 
 if ($requerirAuth) {
@@ -166,6 +266,10 @@ if ($requerirAuth) {
         datos_responder(401, 'Sesion no valida o expirada.');
     }
     // null = no se pudo verificar por red -> se permite (ya quedo en el log).
+
+    if ($requiereAdmin && !datos_es_admin($jwt, $suUrl, $suKey)) {
+        datos_responder(403, 'Se requiere rol de administrador para consultar listadoSFV.');
+    }
 }
 
 $ruta = __DIR__ . '/../datos/' . $f;

@@ -5,17 +5,19 @@ import { fetchDato } from './datos';
 const comp_any = "IUSASOL SUMINISTRADORA ENERGIA";
 
 async function leerExcel(file) {
+  let data;
+
+  if (file instanceof File) {
+    data = await file.arrayBuffer();
+  } else {
+    // Se lee desde el servidor protegido: si no hay sesion o no hay rol
+    // admin, fetchDato lanza el error y este se propaga a la pagina
+    // (no se convierte en un vacio silencioso).
+    const response = await fetchDato('listadoSFV.xlsx');
+    data = await response.arrayBuffer();
+  }
+
   try {
-    let data;
-
-    if (file instanceof File) {
-      data = await file.arrayBuffer();
-    } else {
-      // se lee desde el servidor protegido (requiere sesion valida)
-      const response = await fetchDato('listadoSFV.xlsx');
-      data = await response.arrayBuffer();
-    }
-
     const workbook = XLSX.read(data);
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
@@ -30,7 +32,8 @@ async function leerExcel(file) {
 
     return datos;
   } catch (error) {
-    // don't throw, return empty array so callers can handle gracefully
+    // no es un error de permisos (eso ya se lanzo arriba): es un problema
+    // al parsear el Excel -> se devuelve vacio para que la pagina no caiga
     console.error('Error al leer el archivo Excel:', error);
     return [];
   }

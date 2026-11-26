@@ -36,6 +36,9 @@ export async function fetchDato(nombre) {
     if (response.status === 401) {
       throw new Error(mensaje || 'Tu sesión expiró. Cierra sesión y vuelve a entrar.');
     }
+    if (response.status === 403) {
+      throw new Error(mensaje || 'Se requiere rol de administrador para acceder a estos datos.');
+    }
     throw new Error(mensaje || `No se pudo cargar ${nombre} (HTTP ${response.status}).`);
   }
 

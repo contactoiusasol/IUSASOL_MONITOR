@@ -11,6 +11,7 @@ import MedidoresPage from './pages/medidores';
 import LoginPage from './pages/login';
 import SignupPage from './pages/signup';
 import { PrivateRoute } from './components/private-route';
+import { RoleRoute } from './components/role-route';
 import PorteoPage from './pages/porteo';
 import CincoMinutalPage from './pages/cincominutal';
 import ContratosPage from './pages/contratos';
@@ -69,8 +70,13 @@ export const routes = [
         element: <ReportesPage />
       },
       {
+        // Solo administradores: la pagina y su archivo datos/listadoSFV.xlsx
         path: 'listadoSFV',
-        element: <ListadoSFVPage />
+        element: (
+          <RoleRoute>
+            <ListadoSFVPage />
+          </RoleRoute>
+        )
       },
       {
         path: 'contratos',

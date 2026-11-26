@@ -38,7 +38,7 @@ const ListadoSFV = () => {
       }
     } catch (err) {
       console.error(err);
-      setError('Error al consultar datos');
+      setError(err?.message || 'Error al consultar datos');
     } finally {
       setLoading(false);
       activeRef.current = false;
