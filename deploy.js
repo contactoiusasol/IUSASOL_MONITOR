@@ -81,8 +81,12 @@ const checklist = `# ✅ CHECKLIST DE DESPLIEGUE
   - [ ] index.html está presente
   - [ ] .htaccess está presente (puede estar oculto)
   - [ ] Carpeta assets/ con todos los archivos
-  - [ ] Carpeta api/ con proxy.php, token.config.php y .htaccess (AHÍ VIVE EL TOKEN)
+  - [ ] Carpeta api/ con proxy.php, datos.php y token.config.php (AHÍ VIVE EL TOKEN)
+  - [ ] Carpeta datos/ con los 4 archivos CSV/XLSX (bloqueada por .htaccess, la app la lee vía api/datos.php)
+  - [ ] BORRA de la raíz los archivos de datos viejos (systems.csv, MedidoresMonitoreo.csv, listadoSFV.xlsx, ListadoFacturacion.xlsx) si aún están ahí: ahora viven en datos/
   - [ ] Verifica en el navegador: https://reportes.iusasol.mx/api/proxy.php?path=Server/date debe devolver JSON
+  - [ ] Verifica: https://reportes.iusasol.mx/api/datos.php?f=MedidoresMonitoreo.csv SIN sesión debe devolver 401 JSON
+  - [ ] Verifica: https://reportes.iusasol.mx/api/token.config.php debe devolver 403
   - [ ] Todos los archivos tienen permisos de lectura (644 archivos, 755 directorios)
 
 ## Verificar en el servidor
@@ -121,7 +125,8 @@ console.log('📋 Archivos para subir con WinSCP:\n');
 console.log('   📁 dist/');
 console.log('      ├── index.html');
 console.log('      ├── .htaccess (IMPORTANTE)');
-console.log('      ├── api/            ← proxy.php + token.config.php + .htaccess');
+console.log('      ├── api/            ← proxy.php + datos.php + token.config.php');
+console.log('      ├── datos/          ← 4 archivos CSV/XLSX (bloqueados para HTTP)');
 console.log('      └── assets/');
 console.log('          ├── *.css');
 console.log('          └── *.js\n');
