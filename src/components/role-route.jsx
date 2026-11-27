@@ -10,9 +10,12 @@ import { AuthLoading } from './auth-loading';
  * regresa al dashboard. Se usa POR DENTRO de PrivateRoute.
  */
 export const RoleRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin, isLoading, isRoleLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isLoading, isRoleLoading, role } = useAuth();
 
-  if (isLoading || isRoleLoading) {
+  // Solo espera la PRIMERA carga del rol: si el rol ya se conoce, no se
+  // interrumpe la pagina aunque se revalide la sesion (evita desmontar y
+  // perder los datos en pantalla, p. ej. durante una consulta larga).
+  if (isLoading || (isRoleLoading && !role)) {
     return <AuthLoading message="Verificando permisos..." />;
   }
 

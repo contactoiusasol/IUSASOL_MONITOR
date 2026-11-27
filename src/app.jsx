@@ -3,6 +3,7 @@ import { CssBaseline, ThemeProvider } from '@mui/material';
 import { routes } from './routes';
 import { createTheme } from './theme';
 import { AuthProvider, useAuth } from './contexts/auth-context';
+import { NotifyProvider } from './components/notify';
 import { LoadingScreen } from './components/loading-screen';
 import 'simplebar-react/dist/simplebar.min.css';
 
@@ -21,7 +22,9 @@ const AppContent = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {element}
+      <NotifyProvider>
+        {element}
+      </NotifyProvider>
     </ThemeProvider>
   );
 };

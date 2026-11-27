@@ -40,7 +40,6 @@ export async function leerExcel() {
       }
     });
     
-    console.log('Excel columns found:', columnMap);
     
     // Función para limpiar valores monetarios (quitar $, comas, espacios)
     const limpiarNumero = (valor) => {
@@ -84,7 +83,6 @@ export async function leerExcel() {
       }
     }
     
-    console.log(`Loaded ${data.length} records from Excel`);
     return data;
   } catch (error) {
     console.error('Error reading Excel file:', error);
@@ -100,7 +98,6 @@ export async function obtenerTodosMedidores() {
   try {
     const data = await getMeters(comp_any);
     const meters = data && data.meters ? data.meters : [];
-    console.log(`Obtenidos ${meters.length} medidores con IDcodes`);
     return meters;
   } catch (error) {
     console.error('Error fetching medidores:', error);
@@ -117,7 +114,6 @@ export async function obtenerTodosMedidores() {
  */
 export async function obtenerGeneracionPorPeriodo(idcode, fechaInicio, fechaFin) {
   try {
-    console.log(`Fetching profiles for idcode: ${idcode}, dates: ${fechaInicio} to ${fechaFin}`);
     const data = await getProfilesDetailed({
       id: idcode,
       beginDate: fechaInicio,
@@ -128,7 +124,6 @@ export async function obtenerGeneracionPorPeriodo(idcode, fechaInicio, fechaFin)
     });
 
     const profiles = data && data.profiles ? data.profiles : [];
-    console.log(`Profiles obtenidos para ${idcode}:`, profiles.length);
     
     return profiles;
   } catch (error) {
@@ -165,13 +160,9 @@ export function calcularGeneracionTotal(profiles) {
  */
 export async function obtenerDatosFacturacion(excelData, fechaInicio, fechaFin) {
   try {
-    console.log('Iniciando obtención de datos de facturación...');
-    console.log('Fecha inicio:', fechaInicio, 'Fecha fin:', fechaFin);
-    console.log('Registros en Excel:', excelData.length);
     
     // 1. Obtener todos los medidores con sus IDcodes
     const todosMedidores = await obtenerTodosMedidores();
-    console.log('Total medidores obtenidos de API:', todosMedidores.length);
     
     // 2. Crear un mapa de serial -> idcode
     const serialToIdcode = {};
@@ -183,7 +174,6 @@ export async function obtenerDatosFacturacion(excelData, fechaInicio, fechaFin) 
       }
     });
     
-    console.log('Mapeo serial -> idcode creado');
     
     // 3. Para cada registro del Excel, buscar el IDcode y obtener la generación
     const facturacionData = [];
@@ -210,14 +200,12 @@ export async function obtenerDatosFacturacion(excelData, fechaInicio, fechaFin) 
       let genera = 0;
       
       if (idcode) {
-        console.log(`Procesando medidor: ${medidorLimpio}, IDCode: ${idcode}`);
         
         // Obtener los perfiles de generación
         const profiles = await obtenerGeneracionPorPeriodo(idcode, fechaInicio, fechaFin);
         
         // Calcular la generación total
         genera = calcularGeneracionTotal(profiles);
-        console.log(`Generación calculada para ${medidorLimpio}: ${genera} kWh`);
       } else {
         console.warn(`No se encontró IDcode para medidor: ${medidorLimpio}`);
       }
@@ -230,7 +218,6 @@ export async function obtenerDatosFacturacion(excelData, fechaInicio, fechaFin) 
       });
     }
     
-    console.log('Final facturacionData:', facturacionData);
     return facturacionData;
   } catch (error) {
     console.error('Error obtaining billing data:', error);
@@ -248,7 +235,6 @@ export async function obtenerDatosFacturacion(excelData, fechaInicio, fechaFin) 
  */
 export async function obtenerDatosFacturacionOptimizado(excelData, fechaInicio, fechaFin, onProgress) {
   try {
-    console.log('Iniciando obtención de datos de facturación (optimizado)...');
     
     // 1. Obtener todos los medidores con sus IDcodes
     const todosMedidores = await obtenerTodosMedidores();

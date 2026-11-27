@@ -13,7 +13,7 @@ const Contratos = () => {
     setLoading(true);
     fetchContractsWithDetails()
       .then((r) => { if (mounted) setItems(r); })
-      .catch((err) => { console.error(err); if (mounted) setError('Error al cargar contratos'); })
+      .catch((err) => { console.error(err); if (mounted) setError(err?.message || 'Error al cargar contratos'); })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);

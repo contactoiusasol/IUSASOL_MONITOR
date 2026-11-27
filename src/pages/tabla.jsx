@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { Box, Container, Stack, Typography, Card, Button, CircularProgress, Alert } from '@mui/material';
 import { getDataForAllMegas } from 'src/lib/grafica21megas';
 import { getToday } from 'src/lib/api/endpoints';
+import { useNotify } from 'src/components/notify';
 
 const NUM_MEGAS = 21;
 
@@ -13,6 +14,7 @@ const formatCell = (value) => {
 };
 
 const Tabla = () => {
+  const notify = useNotify();
   const [date, setDate] = useState(() => {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -145,6 +147,7 @@ const Tabla = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    notify('CSV exportado correctamente', 'success');
   };
 //commentario de prueba
   return (

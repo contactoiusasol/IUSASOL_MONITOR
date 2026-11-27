@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Chart, registerables } from 'chart.js';
 import { getDataForAllMegas } from 'src/lib/grafica21megas';
 import { getToday } from 'src/lib/api/endpoints';
+import { useNotify } from 'src/components/notify';
 
 Chart.register(...registerables);
 
 const GraficasPage = () => {
+  const notify = useNotify();
   const lineCanvasRef = useRef(null);
   const lineChartRef = useRef(null);
   const barCanvasRef = useRef(null);
@@ -190,9 +192,10 @@ const GraficasPage = () => {
       document.body.appendChild(a);
       a.click();
       a.remove();
+      notify('Gráfica exportada correctamente', 'success');
     } catch (e) {
       console.error('Error exporting chart:', e);
-      alert('Error al exportar la gráfica');
+      notify('Error al exportar la gráfica', 'error');
     }
   };
 

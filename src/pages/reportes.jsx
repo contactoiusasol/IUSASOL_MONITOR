@@ -4,6 +4,7 @@ import { Box, Container, Stack, Typography, Card, Grid, TextField, Button, Linea
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import * as XLSX from 'xlsx';
 import { getMeters, getProfilesDetailed } from 'src/lib/api/endpoints';
+import { useNotify } from 'src/components/notify';
 
 const configTablas = {
   'tabla-mega-21': [
@@ -86,6 +87,7 @@ const SERIAL_DISPLAY_NAMES = {
 };
 
 export default function Reportes() {
+  const notify = useNotify();
   const [fecha, setFecha] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -291,6 +293,7 @@ export default function Reportes() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    notify('Excel exportado correctamente', 'success');
   }
 
   const renderTable = (tablaId) => {

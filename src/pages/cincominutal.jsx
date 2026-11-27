@@ -29,7 +29,7 @@ const CincoMinutal = () => {
       setProfiles(data);
     } catch (err) {
       console.error(err);
-      setError('Error al cargar perfiles');
+      setError(err?.message || 'Error al cargar perfiles');
     } finally {
       setLoading(false);
     }

@@ -23,7 +23,8 @@ export const AuthProvider = ({ children }) => {
           throw sessionError;
         }
         if (mounted) {
-          setUser(session?.user ?? null);
+          const siguiente = session?.user ?? null;
+          setUser((prev) => (prev && prev.id === (siguiente?.id ?? null) ? prev : siguiente));
         }
       } catch (err) {
         console.error('Auth error:', err);
@@ -43,7 +44,8 @@ export const AuthProvider = ({ children }) => {
     // Escuchar cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (mounted) {
-        setUser(session?.user ?? null);
+        const siguiente = session?.user ?? null;
+        setUser((prev) => (prev && prev.id === (siguiente?.id ?? null) ? prev : siguiente));
       }
     });
 
@@ -77,7 +79,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       mounted = false;
     };
-  }, [user]);
+  }, [user?.id]);
 
   const login = async (email, password) => {
     setIsLoading(true);

@@ -2,8 +2,10 @@ import { useState, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Box, Container, Stack, Typography, Card, TextField, Button } from '@mui/material';
 import listadoSFV from 'src/lib/listadoSFV';
+import { useNotify } from 'src/components/notify';
 
 const ListadoSFV = () => {
+  const notify = useNotify();
   const [fecha, setFecha] = useState('');
   // The Excel file is read from the server via /api/datos.php (requires session)
   const [rows, setRows] = useState([]);
@@ -15,7 +17,7 @@ const ListadoSFV = () => {
 
   async function handleConsultar() {
     if (!fecha) {
-      alert('Por favor selecciona una fecha');
+      notify('Selecciona una fecha antes de consultar', 'warning');
       return;
     }
 
@@ -94,10 +96,6 @@ const ListadoSFV = () => {
                   size="small"
                 />
 
-                <Typography variant="body2" sx={{ ml: 1 }}>
-                  Los datos se leen desde <code>datos/listadoSFV.xlsx</code> en el servidor (protegido)
-                </Typography>
-
                 <Button variant="contained" onClick={handleConsultar} disabled={loading}>
                   {loading ? 'Consultando...' : 'Consultar'}
                 </Button>
@@ -108,7 +106,7 @@ const ListadoSFV = () => {
                   </Button>
                 )}
 
-                <Button variant="outlined" onClick={exportCSV} disabled={rows.length === 0}>
+                <Button variant="outlined" onClick={() => { exportCSV(); notify('CSV exportado correctamente', 'success'); }} disabled={rows.length === 0}>
                   Exportar CSV
                 </Button>
               </Stack>

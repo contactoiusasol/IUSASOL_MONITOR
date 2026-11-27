@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Box, Container, Stack, Typography, Card, Button, CircularProgress } from '@mui/material';
 import { fetchDato } from 'src/lib/datos';
+import { useNotify } from 'src/components/notify';
 
 function parseCSV(csv) {
   const lines = csv.trim().split(/\r?\n/).filter(Boolean);
@@ -44,6 +45,7 @@ function parseCSV(csv) {
 }
 
 const DatabaseIUSASOL = () => {
+  const notify = useNotify();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [headers, setHeaders] = useState([]);
@@ -78,6 +80,7 @@ const DatabaseIUSASOL = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    notify('CSV exportado correctamente', 'success');
   };
 
   return (

@@ -25,8 +25,10 @@ import {
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
 import { leerExcel, obtenerDatosFacturacion, obtenerTodosMedidores, obtenerGeneracionPorPeriodo, calcularGeneracionTotal } from 'src/lib/facturacion';
 import { ReciboPDF } from 'src/components/recibo-pdf';
+import { useNotify } from 'src/components/notify';
 
 export default function FacturacionPage() {
+  const notify = useNotify();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [error, setError] = useState(null);
@@ -36,6 +38,9 @@ export default function FacturacionPage() {
   const [fechaFin, setFechaFin] = useState('');
   const [previewData, setPreviewData] = useState(null);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  // Medidores repetidos en el Excel: detalle para saber a quién pertenecen
+  const [repetidos, setRepetidos] = useState([]);
+  const [verDetalleRepetidos, setVerDetalleRepetidos] = useState(false);
 
   // Función para obtener decimales según el tipo de tarifa
   const getDecimalesTarifa = (nombreTarifa) => {
@@ -146,6 +151,8 @@ export default function FacturacionPage() {
     setLoading(true);
     setError(null);
     setData([]);
+    setRepetidos([]);
+    setVerDetalleRepetidos(false);
 
     try {
       // Leer Excel
@@ -156,19 +163,44 @@ export default function FacturacionPage() {
         return;
       }
 
-      // Mostrar medidores repetidos
-      const medidorCount = {};
-      excelData.forEach(item => {
+      // Detectar medidores repetidos: sin alert(), se guarda el detalle
+      // (filas, clientes y motivo) y se muestra en un panel desplegable.
+      const porMedidor = {};
+      excelData.forEach((item, idx) => {
         if (!item.medidor) return;
-        // Si tiene varios medidores separados por /
-        const medidores = item.medidor.split('/').map(m => m.trim());
-        medidores.forEach(med => {
-          medidorCount[med] = (medidorCount[med] || 0) + 1;
+        const partes = item.medidor.split('/').map((m) => m.trim()).filter(Boolean);
+        partes.forEach((med) => {
+          if (!porMedidor[med]) porMedidor[med] = [];
+          porMedidor[med].push({
+            numero: item.numero || idx + 1,
+            cliente: item.cliente || '',
+            clienteIUSASOL: item.clienteIUSASOL || '',
+            contratoSAP: item.contratoSAP || '',
+            campo: item.medidor,
+            multipar: partes.length > 1
+          });
         });
       });
-      const repetidos = Object.entries(medidorCount).filter(([med, count]) => count > 1);
-      if (repetidos.length > 0) {
-        alert('Medidores repetidos en Excel:\n' + repetidos.map(([med, count]) => `${med}: ${count} veces`).join('\n'));
+
+      const repetidas = Object.entries(porMedidor)
+        .filter(([, filas]) => filas.length > 1)
+        .map(([medidor, filas]) => {
+          const clientes = [...new Set(filas.map((f) => f.cliente).filter(Boolean))];
+          const motivos = [];
+          if (clientes.length === 0) motivos.push('filas repetidas sin cliente');
+          else if (clientes.length === 1) motivos.push(`mismo cliente: ${clientes[0]}`);
+          else motivos.push(`${clientes.length} clientes distintos con el mismo medidor`);
+          if (filas.some((f) => f.multipar)) motivos.push('viene de un campo con varios medidores separados por "/"');
+          return { medidor, veces: filas.length, filas, motivo: motivos.join(' · ') };
+        })
+        .sort((a, b) => b.veces - a.veces);
+
+      setRepetidos(repetidas);
+      if (repetidas.length > 0) {
+        notify(
+          `Se detectaron ${repetidas.length} medidor(es) repetido(s) en el Excel — revisa el detalle`,
+          'warning'
+        );
       }
 
       // Obtener todos los medidores con sus IDcodes
@@ -242,9 +274,34 @@ export default function FacturacionPage() {
     }
   };
 
+  // Exporta el detalle de medidores repetidos (medidor, veces, filas y motivo)
+  const exportarDetalleRepetidos = () => {
+    if (repetidos.length === 0) return;
+    const headers = ['Medidor', 'Veces', 'No', 'Cliente IUSASOL', 'Cliente', 'Contrato SAP', 'Campo original', 'Motivo'];
+    const rows = [];
+    repetidos.forEach((r) => {
+      r.filas.forEach((f) => {
+        rows.push([r.medidor, r.veces, f.numero, f.clienteIUSASOL, f.cliente, f.contratoSAP, f.campo, r.motivo]);
+      });
+    });
+    const csv = [
+      headers.join(','),
+      ...rows.map((row) => row.map((c) => `"${String(c ?? '')}"`).join(','))
+    ].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'medidores_repetidos.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    notify('Detalle de medidores repetidos exportado', 'success');
+  };
+
   const handleExportCsv = () => {
     if (data.length === 0) return;
-
     const headers = [
       'No', 'Cliente IUSASOL', 'Cliente', 'Dirección', 'Contrato SAP', 
       'Medidor', 'Nombre Tarifa', 'Descuento', 'Tarifa CFE', 'Tarifa IUSASOL',
@@ -288,6 +345,7 @@ export default function FacturacionPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    notify('CSV exportado correctamente', 'success');
   };
 
   const paginated = useMemo(() => {
@@ -350,6 +408,68 @@ export default function FacturacionPage() {
 
             {error && (
               <Alert severity="error">{error}</Alert>
+            )}
+
+            {repetidos.length > 0 && (
+              <Alert
+                severity="warning"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => setVerDetalleRepetidos((v) => !v)}
+                  >
+                    {verDetalleRepetidos ? 'Ocultar detalle' : `Ver detalle (${repetidos.length})`}
+                  </Button>
+                }
+              >
+                Se detectaron {repetidos.length} medidor(es) repetido(s) en el Excel.
+                {verDetalleRepetidos ? '' : ' Revisa a qué clientes pertenecen.'}
+              </Alert>
+            )}
+
+            {repetidos.length > 0 && verDetalleRepetidos && (
+              <Card sx={{ p: 2 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2} mb={1}>
+                  <Typography variant="h6">
+                    Medidores repetidos — a quién pertenecen
+                  </Typography>
+                  <Button size="small" variant="outlined" onClick={exportarDetalleRepetidos}>
+                    Exportar detalle CSV
+                  </Button>
+                </Box>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Medidor</TableCell>
+                        <TableCell align="center">Veces</TableCell>
+                        <TableCell>Filas del Excel (No. — Cliente — Contrato SAP)</TableCell>
+                        <TableCell>Posible motivo</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {repetidos.map((r) => (
+                        <TableRow key={r.medidor}>
+                          <TableCell sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                            {r.medidor}
+                          </TableCell>
+                          <TableCell align="center">{r.veces}</TableCell>
+                          <TableCell>
+                            {r.filas.map((f, i) => (
+                              <Typography key={i} variant="body2">
+                                #{f.numero} — {f.clienteIUSASOL || f.cliente || '(sin cliente)'}
+                                {f.contratoSAP ? ` (SAP ${f.contratoSAP})` : ''}
+                              </Typography>
+                            ))}
+                          </TableCell>
+                          <TableCell>{r.motivo}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Card>
             )}
 
             {loading && (

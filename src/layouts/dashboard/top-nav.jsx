@@ -1,5 +1,5 @@
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { Avatar, Box, Button, Link, Stack, Menu, MenuItem } from '@mui/material';
+import { Avatar, Box, Button, Chip, Link, Stack, Menu, MenuItem } from '@mui/material';
 import { useState } from 'react';
 import { Logo } from 'src/components/logo';
 import { useAuth } from 'src/contexts/auth-context';
@@ -8,7 +8,7 @@ const TOP_NAV_HEIGHT = 64;
 
 export const TopNav = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, role, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleAvatarClick = (event) => {
@@ -74,6 +74,15 @@ export const TopNav = () => {
           >
             {user?.email}
           </Box>
+          {role && (
+            <Chip
+              size="small"
+              label={role === 'admin' ? 'Administrador' : 'Usuario'}
+              color={role === 'admin' ? 'success' : 'default'}
+              variant={role === 'admin' ? 'filled' : 'outlined'}
+              sx={{ color: 'common.white', fontWeight: 600 }}
+            />
+          )}
           <Avatar
             onClick={handleAvatarClick}
             src="/assets/avatars/usuario.jpg"

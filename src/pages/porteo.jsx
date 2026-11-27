@@ -13,7 +13,7 @@ const Porteo = () => {
     setLoading(true);
     fetchPorteoMeters()
       .then((m) => { if (mounted) setMeters(m); })
-      .catch((err) => { console.error(err); if (mounted) setError('Error al cargar datos'); })
+      .catch((err) => { console.error(err); if (mounted) setError(err?.message || 'Error al cargar datos'); })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
